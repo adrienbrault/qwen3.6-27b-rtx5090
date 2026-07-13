@@ -106,6 +106,14 @@ MTP acceptance: **75.8%** (per-position 0.945 / 0.764 / 0.564 — a healthy deca
 3. **Re-verify after every vLLM bump.** These patches are version-sensitive; a nightly that moves `turboquant_attn.py` will silently fail to apply or, worse, apply to shifted code.
 4. **`--kv-cache-memory` "fully utilize" hint OOMs at 240K+** — it ignores warmup transients. Use `--gpu-memory-utilization 0.95` and let vLLM profile.
 
+## License
+
+MIT (see [LICENSE](LICENSE)) for the original work here — docs, benchmarks, scripts, and the fixes.
+
+`patches/vllm-only.diff` is redistributed verbatim from [vllm#40914](https://github.com/vllm-project/vllm/pull/40914)
+by @Sandermage and stays under **Apache-2.0**, as do the vLLM files the patches modify. See
+[THIRD_PARTY.md](THIRD_PARTY.md).
+
 ## Credits
 
 - [vLLM](https://github.com/vllm-project/vllm) and PR [#40914](https://github.com/vllm-project/vllm/pull/40914) by @Sandermage — the foundation this builds on.

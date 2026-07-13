@@ -12,9 +12,10 @@ PORT=8020
 NAME=vllm-27b
 
 # Persistent compile/triton cache => warm restarts. ALWAYS mount these.
-CACHE="-v ${CACHE_DIR:-/srv/qwen5090/cache}/torch_compile:/root/.cache/vllm/torch_compile_cache \
-       -v /srv/qwen5090/cache/triton:/root/.triton/cache \
-       -v /srv/qwen5090/cache/inductor:/root/.cache/inductor"
+CACHE_DIR=${CACHE_DIR:-/srv/qwen5090/cache}
+CACHE="-v ${CACHE_DIR}/torch_compile:/root/.cache/vllm/torch_compile_cache \
+       -v ${CACHE_DIR}/triton:/root/.triton/cache \
+       -v ${CACHE_DIR}/inductor:/root/.cache/inductor"
 
 sudo docker rm -f "$NAME" >/dev/null 2>&1 || true
 
