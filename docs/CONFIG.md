@@ -97,10 +97,3 @@ sudo python3 -c "import pynvml as N; N.nvmlInit(); h=N.nvmlDeviceGetHandleByInde
 Validate the offset actually applied (a "running" service isn't proof): `nvidia-smi -q -d CLOCK`, or read `nvmlDeviceGetMemClkVfOffset`. +4500 is stable on this sample; your mileage varies — step up and watch for memory-ECC errors or artifacts.
 
 **Disable swap.** Over-committing RAM (e.g. running a benchmark container next to vLLM) swap-thrashes the box into a hard hang instead of failing fast. `swapoff -a` turns a wedge into a clean OOM kill.
-
-**Blackwell boot quirks** (if the GPU doesn't come up):
-```
-GRUB_CMDLINE_LINUX_DEFAULT="nvidia-drm.modeset=1 initcall_blacklist=sysfb_init pci=realloc=off"
-```
-- `initcall_blacklist=sysfb_init` — stops the kernel boot framebuffer from claiming the GPU's BAR (`NVRM: request_mem_region failed`).
-- `pci=realloc=off` — kernel PCI realloc (triggered by the 5090's unassignable SR-IOV VF BARs) drops BAR1 entirely (`NVRM: BAR1 is 0M @ 0x0`).
