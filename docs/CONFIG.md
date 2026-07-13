@@ -1,0 +1,97 @@
+# Every flag, and why
+
+The serve command lives in [`../scripts/serve.sh`](../scripts/serve.sh). This explains it.
+
+## Model
+
+`unsloth/Qwen3.6-27B-NVFP4` — compressed-tensors NVFP4 (4-bit weights), with a **vision tower** and an **MTP head**. ~22 GB on disk.
+
+Chosen over the alternatives by measurement:
+
+| quant | why not |
+|---|---|
+| `nvidia/Qwen3.6-27B-NVFP4` (official) | ~2.6× slower prefill (4.9K vs 12.4K t/s @4K), 20–25% slower decode, OOMs at util 0.95, MTP crashes at moderate batch. |
+| natfii NVFP4 (modelopt) | Faster prefill (13.3K), but **lost Terminal-Bench 2.1** to Unsloth (12/16 vs 15/16 trials, 7/8 vs 8/8 pass@2). Quality beat speed. |
+| Intel AutoRound int4 | Faster decode, ~4× slower prefill. Good if your workload is output-heavy, bad for big-context coding. |
+
+> **Loading note:** Unsloth's build is compressed-tensors. Pass **no** `--quantization` flag (auto-detects). Passing `modelopt` errors out.
+
+## The flags
+
+```bash
+--kv-cache-dtype turboquant_4bit_nc --block-size 128
+```
+The whole point. 4-bit KV → **47.8K tokens/GiB vs fp8's 26.8K** (1.8× denser) → 261K pool instead of 172K. `block-size 128` is required by the TurboQuant kernel. **Needs the patched image** — on stock vLLM this + MTP produces garbage.
+
+```bash
+-e VLLM_TQ_PRESET=turboquant_4bit_nc      # REQUIRED
+```
+Not optional. vLLM never propagates the KV dtype to the MTP **draft** runner (it arrives as `"auto"` and crashes). `tq_auto_fallback.py` reads this env as the fallback. Must match `--kv-cache-dtype`.
+
+```bash
+--speculative-config '{"method":"qwen3_5_mtp","num_speculative_tokens":3}'
+```
+MTP speculative decoding. `ns=3` is the sweet spot (ns=4 is unstable, ns=1/2 leave speed on the table). **Costs ~0 VRAM** — the draft head ships inside the model weights. Acceptance ~76%.
+
+⚠️ Known to **crash at 16+ concurrent** (upstream vLLM MTP bug). Drop `--speculative-config` entirely if you need heavy concurrency.
+
+```bash
+--gpu-memory-utilization 0.95 --max-model-len 240000
+```
+Let vLLM *profile* the memory. Do **not** hand-set `--kv-cache-memory` to the "fully utilize" value vLLM suggests in its logs — that hint ignores warmup transients and OOMs at 240K+. 240K max-len against a 261K pool leaves headroom for concurrency.
+
+```bash
+--max-num-seqs 8
+```
+Fewer sequence slots → less activation memory → bigger KV pool. It does **not** partition the KV cache (that's a shared paged pool). 8 is a good balance; `1` would buy a little more context but serializes everything.
+
+```bash
+--max-num-batched-tokens 8192
+```
+**Do not lower this.** 4096 costs a **~4× prefill regression** (9.6K → 2.6K t/s) to buy +28K context. Bad trade, tested.
+
+```bash
+--mamba-cache-mode align --enable-prefix-caching --enable-chunked-prefill
+```
+Qwen3.6 is a hybrid (GDN/linear-attention + full-attention). `align` mode is what lets prefix caching work on the Mamba layers. Prefix caching gives a real **5× speedup on repeated prompts** — even though vLLM's own metric claims 0% (see README gotchas).
+
+```bash
+--limit-mm-per-prompt '{"image":4,"video":0}'
+```
+Vision on. Costs roughly 60K tokens of context. Drop it (+ `--language-model-only`) if you want a text-only mega-context mode.
+
+```bash
+--reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_xml
+```
+The model emits XML-format tool calls. `qwen3_xml` is correct; `hermes` silently drops them.
+
+```bash
+--override-generation-config '{"temperature":0.6,"top_p":0.95,"top_k":20}'
+```
+Qwen's recommended sampling. (Their *benchmark* config uses `temperature: 1.0` — match that if you're reproducing published scores.)
+
+## Environment
+
+```bash
+-e PYTORCH_ALLOC_CONF=expandable_segments:True,max_split_size_mb:512   # fragmentation
+-e TORCH_MATMUL_PRECISION=high
+```
+
+Mount the compile caches on **every** launch — content-addressed, shared across models, turns a ~200s cold start into ~120s:
+
+```bash
+-v .../cache/torch_compile:/root/.cache/vllm/torch_compile_cache
+-v .../cache/triton:/root/.triton/cache
+-v .../cache/inductor:/root/.cache/inductor
+```
+
+## Host notes
+
+**Disable swap.** Over-committing RAM (e.g. running a benchmark container next to vLLM) swap-thrashes the box into a hard hang instead of failing fast. `swapoff -a` turns a wedge into a clean OOM kill.
+
+**Blackwell boot quirks** (if the GPU doesn't come up):
+```
+GRUB_CMDLINE_LINUX_DEFAULT="nvidia-drm.modeset=1 initcall_blacklist=sysfb_init pci=realloc=off"
+```
+- `initcall_blacklist=sysfb_init` — stops the kernel boot framebuffer from claiming the GPU's BAR (`NVRM: request_mem_region failed`).
+- `pci=realloc=off` — kernel PCI realloc (triggered by the 5090's unassignable SR-IOV VF BARs) drops BAR1 entirely (`NVRM: BAR1 is 0M @ 0x0`).
