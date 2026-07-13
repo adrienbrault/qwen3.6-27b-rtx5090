@@ -87,6 +87,15 @@ Mount the compile caches on **every** launch — content-addressed, shared acros
 
 ## Host notes
 
+**GPU overclock (affects the benchmark numbers).** This box runs a **memory-only overclock: +4500 MHz VRAM offset** (16,051 MHz effective, vs ~14,001 stock) at the 600 W power limit, persisted across reboots via a systemd unit. Core clock is left at stock (0 offset) — deliberately, because decode throughput on this model is **memory-bandwidth-bound**, so the memory OC is the only knob that moves the needle and a core OC would add heat for nothing. **All throughput numbers in [../bench/RESULTS.md](../bench/RESULTS.md) are with this OC.** A stock 5090 will decode somewhat slower; prefill (compute-bound) is barely affected. Reproduce with:
+
+```bash
+sudo nvidia-smi -pm 1 && sudo nvidia-smi -pl 600 && sudo nvidia-smi -rgc
+sudo python3 -c "import pynvml as N; N.nvmlInit(); h=N.nvmlDeviceGetHandleByIndex(0); \
+  N.nvmlDeviceSetGpcClkVfOffset(h,0); N.nvmlDeviceSetMemClkVfOffset(h,4500)"
+```
+Validate the offset actually applied (a "running" service isn't proof): `nvidia-smi -q -d CLOCK`, or read `nvmlDeviceGetMemClkVfOffset`. +4500 is stable on this sample; your mileage varies — step up and watch for memory-ECC errors or artifacts.
+
 **Disable swap.** Over-committing RAM (e.g. running a benchmark container next to vLLM) swap-thrashes the box into a hard hang instead of failing fast. `swapoff -a` turns a wedge into a clean OOM kill.
 
 **Blackwell boot quirks** (if the GPU doesn't come up):
