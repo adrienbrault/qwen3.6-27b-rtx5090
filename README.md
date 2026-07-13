@@ -65,7 +65,7 @@ Then `http://localhost:8020/v1` speaks OpenAI. See [`docs/CONFIG.md`](docs/CONFI
 
 ## Benchmarks
 
-Hardware: RTX 5090 32 GB (`sm_120`) + Ryzen 9 5900X + 62 GB RAM, Ubuntu 24.04.
+Hardware: RTX 5090 32 GB (`sm_120`) + Ryzen 9 5900X + 64 GB RAM, Ubuntu 24.04.
 Model: [`unsloth/Qwen3.6-27B-NVFP4`](https://huggingface.co/unsloth/Qwen3.6-27B-NVFP4) (4-bit weights) + `turboquant_4bit_nc` KV + MTP `ns=3` + vision.
 
 ### Throughput ([llama-benchy](https://github.com/eugr/llama-benchy), decode t/s)

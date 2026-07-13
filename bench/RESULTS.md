@@ -1,6 +1,6 @@
 # Benchmark results
 
-Hardware: RTX 5090 32 GB (`sm_120`), Ryzen 9 5900X, 62 GB RAM, Ubuntu 24.04, driver 595.71.05.
+Hardware: RTX 5090 32 GB (`sm_120`), Ryzen 9 5900X, 64 GB RAM, Ubuntu 24.04, driver 595.71.05.
 **GPU: +4500 MHz memory OC (16 GHz effective), 600 W, core stock.** Decode is memory-bound, so
 these throughput numbers run above a stock 5090 — see [../docs/CONFIG.md](../docs/CONFIG.md#host-notes).
 Model: `unsloth/Qwen3.6-27B-NVFP4` + MTP `ns=3` + vision, unless noted.
