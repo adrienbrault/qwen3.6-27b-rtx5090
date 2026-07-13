@@ -42,7 +42,6 @@ every axis — its slow prefill path is the killer.
 |---|---|---|
 | **Aider polyglot** (225 exercises) | diff format, 4 threads | **72.3% pass@2**, 34.4% pass@1, **97.3% well-formed** |
 | **Terminal-Bench 2.1** (8-task subset ×2) | Harbor + Terminus-2 | **7/8 pass@2** (12/16 trials; 2 of the 4 misses were agent *timeouts*, not wrong answers) |
-| Terminal-Bench 2.0 (89 tasks) | Harbor + Terminus-2, temp 1.0 | *running — vs Qwen's published **59.3*** |
 
 Coherence: needle-in-haystack at 10K recalled exactly; factual list clean; MTP per-position
 acceptance 0.945 / 0.764 / 0.564 (healthy decay — flat 100% would mean degenerate lock-step).
@@ -56,6 +55,7 @@ The nearest published Qwen reference is Qwen3-32B at 41.3% (diff, May 2025).
 **Terminal-Bench 2.0 is the comparable one**: Qwen publishes **59.3** for Qwen3.6-27B with a fully
 documented config (Harbor + Terminus-2, temp 1.0, top_p 0.95, top_k 20, 256K ctx, avg of 5 runs).
 That is the number to beat — or to lose to, by however much 4-bit weights + 4-bit KV cost.
+A full 89-task run against that baseline is the obvious next measurement; it is not in this repo yet.
 
 ## Rejected (with numbers, so nobody redoes them)
 

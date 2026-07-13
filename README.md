@@ -83,7 +83,6 @@ TurboQuant wins to c4 and **plateaus** past it — its Triton kernel does 4-bit 
 |---|---|---|
 | **Aider polyglot** (225 exercises, diff) | **72.3%** pass@2 | 97.3% well-formed edits — reliably emits machine-applicable diffs |
 | **Terminal-Bench 2.1** (8-task subset ×2) | **7/8** pass@2 | matches the fp8 baseline — 4-bit KV costs no measurable quality |
-| Terminal-Bench 2.0 (89 tasks) | *running* | vs Qwen's published **59.3** (BF16, same harness/sampling) |
 
 MTP acceptance: **75.8%** (per-position 0.945 / 0.764 / 0.564 — a healthy decay curve). Needle-in-haystack at 10K: recalled.
 
